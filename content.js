@@ -2,11 +2,12 @@ var state = {
     authorOnlyToggle: false
 };
 
+// Scrape the name of the current thread (e.g., "the-mobius-trip.344776")
 var threadUrl = $('#pageDescription a:last-of-type').attr('href');
 var thread = threadUrl.substring(threadUrl.indexOf('/') + 1, threadUrl.lastIndexOf('/'));
 
 // Toggle ON if thread is in list of toggled threads
-window.onload = chrome.storage.sync.get('toggledThreads', function(result) {
+document.onload = chrome.storage.sync.get('toggledThreads', function(result) {
     var toggledThreads = result.toggledThreads || [];
     var toggleStatus = toggledThreads.indexOf(thread) !== -1;
     if (toggleStatus) {
@@ -21,7 +22,8 @@ chrome.runtime.onMessage.addListener(
         if (request.action === 'toggleAuthorOnly') {
 
             // State variable actually gets toggled before the real page does!
-            // The order is important!
+            // The order is important, because toggleAuthorOnly() changes the actual toggle state to
+            // match the value of state.authorOnlyToggle, not the value of !state.authorOnlyToggle
             state.authorOnlyToggle = !state.authorOnlyToggle;
 
             // Toggle author only posts on current page
@@ -30,10 +32,19 @@ chrome.runtime.onMessage.addListener(
             // Send response to extension with current toggle state
             sendResponse({status: state.authorOnlyToggle});
         }
+        // Without this, the listener will stop functioning after the first time sendResponse is called
         return true;
     }
 );
 
+/**
+ * toggleAuthorOnly toggles whether the user is viewing only the OP's posts in a thread or not.
+ *
+ * @param boolean status        True if thread is being toggled ON, False if thread is being toggled OFF
+ * @param String  thread        The thread being toggled
+ * @param boolean loadingSaved  True if toggleAuthorOnly is being called to toggle a saved thread that the user
+                                has newly opened (in a new tab), False otherwise
+ */
 function toggleAuthorOnly(status, thread, loadingSaved) {
 
     var display = (status ? 'none' : 'block');
@@ -47,12 +58,19 @@ function toggleAuthorOnly(status, thread, loadingSaved) {
         }
     });
 
-    // Either save or delete current thread from toggled threads list, depending on state
+    // If toggleAuthorOnly is not being called in order to toggle ON a revisited thread
     if (!loadingSaved) {
+        // Either save or delete current thread from toggled threads list, depending on state
         saveOrDeleteToggledThread(status, thread);
     }
 }
 
+/**
+ * saveOrDeleteToggledThread adds or removes a thread from the list of threads that have been toggled.
+ *
+ * @param boolean status  True if thread is being toggled ON, False if thread is being toggled OFF
+ * @param String  thread  The thread being toggled
+ */
 function saveOrDeleteToggledThread(status, thread) {
 
     // Get toggled threads
@@ -61,12 +79,11 @@ function saveOrDeleteToggledThread(status, thread) {
 
         if (status) {  // If current thread was toggled ON, add it to the list
             toggledThreads.push(thread);
-            chrome.storage.sync.set({toggledThreads: toggledThreads});
-            console.log('toggle saved');
         } else {  // If current thread was toggled OFF, remove it from the list
             toggledThreads.splice(toggledThreads.indexOf(thread), 1);
-            chrome.storage.sync.set({toggledThreads: toggledThreads});
-            console.log('toggle deleted');
         }
+
+        // Save changes
+        chrome.storage.sync.set({toggledThreads: toggledThreads});
     });
 }

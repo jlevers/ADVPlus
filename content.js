@@ -1,5 +1,6 @@
 var state = {
-    authorOnlyToggle: false
+    authorOnlyToggle: false,
+    fixFormat: false
 };
 
 // Scrape the name of the current thread (e.g., "the-mobius-trip.344776")
@@ -7,13 +8,27 @@ var threadUrl = $('#pageDescription a:last-of-type').attr('href');
 var thread = threadUrl.substring(threadUrl.indexOf('/') + 1, threadUrl.lastIndexOf('/'));
 
 // Toggle ON if thread is in list of toggled threads
-document.onload = chrome.storage.sync.get('toggledThreads', function(result) {
-    var toggledThreads = result.toggledThreads || [];
-    var toggleStatus = toggledThreads.indexOf(thread) !== -1;
-    if (toggleStatus) {
-        state.authorOnlyToggle = !state.authorOnlyToggle;
+document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'], function(result) {
+
+    // Make state variable match saved actions
+    var data = {
+        toggledThreads: result.toggledThreads || [],
+        formatFixedThreads: result.formatFixedThreads || []
+    };
+    state = {
+        authorOnlyToggle: data.toggledThreads.indexOf(thread) !== -1,
+        fixFormat: data.formatFixedThreads.indexOf(thread) !== -1
+    };
+
+    // Trigger saved actions
+
+    if (state.authorOnlyToggle) {
         toggleAuthorOnly(state.authorOnlyToggle, thread, true);
     }
+    if (state.fixFormat) {
+        fixFormat(state.fixFormat, thread, true);
+    }
+
 });
 
 // Listen for messages from extension
@@ -33,12 +48,13 @@ chrome.runtime.onMessage.addListener(
             sendResponse({status: state.authorOnlyToggle});
         } else if (request.action === 'fixFormat') {
 
-            // Toggle format fixes on current page
-            fixFormat(request.thread);
+            state.fixFormat = !state.fixFormat;
 
-            // Send response to extension wtih current toggle state (always true since fixes can only be removed
-            // by refreshing for now)
-            sendResponse({status: true});
+            // Toggle format fixes on current page
+            fixFormat(state.fixFormat, request.thread, false);
+
+            // Send response to extension with current format fixes toggle state
+            sendResponse({status: state.fixFormat});
 
         }
         // Without this, the listener will stop functioning after the first time sendResponse is called
@@ -70,68 +86,84 @@ function toggleAuthorOnly(status, thread, loadingSaved) {
     // If toggleAuthorOnly is not being called in order to toggle ON a revisited thread
     if (!loadingSaved) {
         // Either save or delete current thread from toggled threads list, depending on state
-        saveOrDeleteToggledThread(status, thread);
+        saveOrDeleteThreadAction(status, thread, 'toggleAuthorOnly');
     }
 }
 
 /**
- * toggleAuthorOnly toggles whether the user is viewing only the OP's posts in a thread or not.
+ * fixFormat changes whether format fixes are applied to the thread or not.
  *
+ * @param boolean status        True if formatting is being toggled ON, False if formatting is being toggled OFF
  * @param String  thread        The thread being toggled
+ * @param boolean loadingSaved  True if fixFormat is being called to fix a saved thread that the user
+ *                              has newly opened (in a new tab), False otherwise
 */
-function fixFormat(thread, loadingSaved) {
+function fixFormat(status, thread, loadingSaved) {
 
-    var posts = $('li.message .messageInfo .messageContent article .messageText');
+    // Only apply format fixes if user is turning them ON
+    if (status) {
+        var posts = $('li.message .messageInfo .messageContent article .messageText');
 
-    posts.each(function(index) {
+        posts.each(function(index) {
 
-        // Standardize the type
-        $(this).find('span')
-        .css({
-            'font-size': '12pt',
-            'font-family': 'Tahoma, Geneva, sans-serif',
-            'line-height': '1.4',
-            'color': '#c8c8c8'
-        });
-
-        var html = $(this).html();
-
-
-        // Remove extra tags and convert html character codes to characters
-        html = html
-            .replace(/&lt;\/?o.*&gt;/g, '')     // &lt; is '<' and &gt; is '>', so replacing everywhere where there's <o:p></o:p>
-            .replace(/&lt;\/?st1.*?&gt;/g, '')  // replacing everywhere with <st1:....> or </st1:....>
-            // .replace(/(|)/g, '\'')
-            .replace(/&amp;#(\d+);/g, function(match, number){  // Replace all html character codes like &#8211; with the actual character
-                console.log('test');
-                return String.fromCharCode(number);
+            // Standardize the type
+            $(this).find('span')
+            .css({
+                'font-size': '12pt',
+                'font-family': 'Tahoma, Geneva, sans-serif',
+                'line-height': '1.4',
+                'color': '#c8c8c8'
             });
 
-        $(this).html(html);
+            var html = $(this).html();
 
-    });
 
+            // Remove extra tags and convert html character codes to characters
+            html = html
+                .replace(/&lt;\/?o.*&gt;/g, '')     // &lt; is '<' and &gt; is '>', so replacing everywhere where there's <o:p></o:p>
+                .replace(/&lt;\/?st1.*?&gt;/g, '')  // Replacing everywhere with <st1:....> or </st1:....>
+                // .replace(/(|)/g, '\'')   // This would replace characters that are encoded wrong with apostrophes, but I haven't figured it out yet
+                .replace(/&amp;#(\d+);/g, function(match, number){  // Replace all html character codes like &#8211; with the actual character
+                    return String.fromCharCode(number);
+                });
+
+            $(this).html(html);
+
+        });
+    }
+
+    // If fixFormat is not being called in order to turn fixes ON a revisited thread
+    if (!loadingSaved) {
+        // Either save or delete current thread from toggled threads list, depending on state
+        saveOrDeleteThreadAction(status, thread, 'fixFormat');
+    }
 }
 
 /**
- * saveOrDeleteToggledThread adds or removes a thread from the list of threads that have been toggled.
+ * saveOrDeleteThreadAction adds or removes a thread from the list of threads that have been toggled.
  *
  * @param boolean status  True if thread is being toggled ON, False if thread is being toggled OFF
  * @param String  thread  The thread being toggled
+ * @param String  action  The action being saved (toggleAuthorOnly, fixFormat, etc)
  */
-function saveOrDeleteToggledThread(status, thread) {
+function saveOrDeleteThreadAction(status, thread, action) {
 
-    // Get toggled threads
-    chrome.storage.sync.get('toggledThreads', function(result) {
-        toggledThreads = result.toggledThreads || [];
+    var actionsMap = {
+        'toggleAuthorOnly': 'toggledThreads',
+        'fixFormat': 'formatFixedThreads'
+    };
 
-        if (status) {  // If current thread was toggled ON, add it to the list
-            toggledThreads.push(thread);
-        } else {  // If current thread was toggled OFF, remove it from the list
-            toggledThreads.splice(toggledThreads.indexOf(thread), 1);
+    var retrieve = actionsMap[action];
+
+    chrome.storage.sync.get(retrieve, function(result) {
+        var retrieved = result[retrieve] || [];
+
+        if (status) {
+            retrieved.push(thread);
+        } else {
+            retrieved.splice(retrieved.indexOf(thread), 1);
         }
 
-        // Save changes
-        chrome.storage.sync.set({toggledThreads: toggledThreads});
+        chrome.storage.sync.set({[retrieve]: retrieved});
     });
 }

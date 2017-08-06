@@ -11,9 +11,13 @@ $(document).ready(function() {
 
         // Check if the thread being viewed has been saved as toggled, and if so, give the toggle
         // button the active class
-        chrome.storage.sync.get('toggledThreads', function(result) {
+        chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'], function(result) {
             if (result.toggledThreads.indexOf(currentThread) !== -1) {
-                toggleButtonState(true);
+                toggleButtonState(true, '#toggleAuthorOnly');
+            }
+
+            if (result.formatFixedThreads.indexOf(currentThread) !== -1) {
+                toggleButtonState(true, '#fixFormat');
             }
         });
 
@@ -50,6 +54,8 @@ $(document).ready(function() {
         // Send a message to the content script to apply format fixes to current thread
         chrome.tabs.sendMessage(tabId, {action: 'fixFormat', thread: thread}, function(response) {
 
+            console.log(JSON.stringify(response));
+
             // If fixed formatting turned ON, make the formatting button active, and if turned OFF,
             // make the formatting button inactive
             toggleButtonState(response.status, '#fixFormat');
@@ -60,7 +66,8 @@ $(document).ready(function() {
     // Toggle the button state (active or inactive) of the button of ID buttonId. When status is true, button is made to be active,
     // and when status is false, button is made to be inactive.
     function toggleButtonState(status, buttonId) {
-        status ? $(buttonId).addClass('pure-button-active') : $('#toggleAuthorOnly').removeClass('pure-button-active');
+        console.log('TOGGLE');
+        status ? $(buttonId).addClass('pure-button-active') : $(buttonId).removeClass('pure-button-active');
     }
 });
 

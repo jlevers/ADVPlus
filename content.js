@@ -31,6 +31,15 @@ chrome.runtime.onMessage.addListener(
 
             // Send response to extension with current toggle state
             sendResponse({status: state.authorOnlyToggle});
+        } else if (request.action === 'fixFormat') {
+
+            // Toggle format fixes on current page
+            fixFormat(request.thread);
+
+            // Send response to extension wtih current toggle state (always true since fixes can only be removed
+            // by refreshing for now)
+            sendResponse({status: true});
+
         }
         // Without this, the listener will stop functioning after the first time sendResponse is called
         return true;
@@ -63,6 +72,45 @@ function toggleAuthorOnly(status, thread, loadingSaved) {
         // Either save or delete current thread from toggled threads list, depending on state
         saveOrDeleteToggledThread(status, thread);
     }
+}
+
+/**
+ * toggleAuthorOnly toggles whether the user is viewing only the OP's posts in a thread or not.
+ *
+ * @param String  thread        The thread being toggled
+*/
+function fixFormat(thread, loadingSaved) {
+
+    var posts = $('li.message .messageInfo .messageContent article .messageText');
+
+    posts.each(function(index) {
+
+        // Standardize the type
+        $(this).find('span')
+        .css({
+            'font-size': '12pt',
+            'font-family': 'Tahoma, Geneva, sans-serif',
+            'line-height': '1.4',
+            'color': '#c8c8c8'
+        });
+
+        var html = $(this).html();
+
+
+        // Remove extra tags and convert html character codes to characters
+        html = html
+            .replace(/&lt;\/?o.*&gt;/g, '')     // &lt; is '<' and &gt; is '>', so replacing everywhere where there's <o:p></o:p>
+            .replace(/&lt;\/?st1.*?&gt;/g, '')  // replacing everywhere with <st1:....> or </st1:....>
+            // .replace(/(|)/g, '\'')
+            .replace(/&amp;#(\d+);/g, function(match, number){  // Replace all html character codes like &#8211; with the actual character
+                console.log('test');
+                return String.fromCharCode(number);
+            });
+
+        $(this).html(html);
+
+    });
+
 }
 
 /**

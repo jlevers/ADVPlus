@@ -7,11 +7,11 @@ $(document).ready(function() {
         var url = tabs[0].url;
 
         // Get the part of the url that says which thread it is (e.g., "the-mobius-trip.344776")
-        currentThread = url.substring(url.indexOf('threads/') + 8, url.lastIndexOf('/'));
+        var currentThread = url.substring(url.indexOf('threads/') + 8, url.lastIndexOf('/'));
 
         // Check if the thread being viewed has been saved as toggled, and if so, give the toggle
         // button the active class
-        chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'], function(result) {
+        chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads', 'fixedPhotosThreads'], function(result) {
             if (result.toggledThreads.indexOf(currentThread) !== -1) {
                 toggleButtonState(true, '#toggleAuthorOnly');
             }
@@ -19,9 +19,13 @@ $(document).ready(function() {
             if (result.formatFixedThreads.indexOf(currentThread) !== -1) {
                 toggleButtonState(true, '#fixFormat');
             }
+
+            if (result.fixedPhotosThreads.indexOf(currentThread) !== -1) {
+                toggleButtonState(true, '#fixPhotos');
+            }
         });
 
-        // Disable "Toggle Author Only" button if not currently viewing a url of
+        // Disable buttons if not currently viewing a url of
         // the structure http(s)://advrider.com/index.php?threads/*
         if(!url.match(threadRegex)) {
             $('.button-xlarge').addClass('pure-button-disabled');
@@ -34,6 +38,11 @@ $(document).ready(function() {
             // Fix formatting if user clicks formatting button
             $('#fixFormat').click(function() {
                 fixFormat(tabs[0].id, currentThread);
+            });
+
+            // Fix Photobucket broken images
+            $('#fixPhotos').click(function() {
+                fixPhotos(tabs[0].id, currentThread);
             });
         }
 
@@ -54,8 +63,6 @@ $(document).ready(function() {
         // Send a message to the content script to apply format fixes to current thread
         chrome.tabs.sendMessage(tabId, {action: 'fixFormat', thread: thread}, function(response) {
 
-            console.log(JSON.stringify(response));
-
             // If fixed formatting turned ON, make the formatting button active, and if turned OFF,
             // make the formatting button inactive
             toggleButtonState(response.status, '#fixFormat');
@@ -63,11 +70,17 @@ $(document).ready(function() {
         });
     }
 
+    function fixPhotos(tabId, thread) {
+        // Send a message to the content script to update Photobucket image URLs
+        chrome.tabs.sendMessage(tabId, {action: 'fixPhotos', thread: thread}, function(response) {
+
+            toggleButtonState(response.status, '#fixPhotos');
+        });
+    }
+
     // Toggle the button state (active or inactive) of the button of ID buttonId. When status is true, button is made to be active,
     // and when status is false, button is made to be inactive.
     function toggleButtonState(status, buttonId) {
-        console.log('TOGGLE');
         status ? $(buttonId).addClass('pure-button-active') : $(buttonId).removeClass('pure-button-active');
     }
 });
-

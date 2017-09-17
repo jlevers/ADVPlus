@@ -3,7 +3,7 @@
 
   "name": "ADV+",
   "description": "Provides some useful tools for use with advrider.com.",
-  "version": "1.5",
+  "version": "1.7",
 
   "browser_action": {
     "default_icon": "icon.png",

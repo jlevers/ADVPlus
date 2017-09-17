@@ -1,7 +1,6 @@
 var state = {
     authorOnlyToggle: false,
-    fixFormat: false,
-    fixPhotos: false
+    fixFormat: false
 };
 
 // Scrape the name of the current thread (e.g., "the-mobius-trip.344776")
@@ -9,18 +8,16 @@ var threadUrl = $('#pageDescription a:last-of-type').attr('href');
 var thread = threadUrl.substring(threadUrl.indexOf('/') + 1, threadUrl.lastIndexOf('/'));
 
 // Toggle ON if thread is in list of toggled threads
-document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads', 'fixedPhotosThreads'], function(result) {
+document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'], function(result) {
 
     // Make state variable match saved actions
     var data = {
         toggledThreads: result.toggledThreads || [],
-        formatFixedThreads: result.formatFixedThreads || [],
-        fixedPhotosThreads: result.fixedPhotosThreads || []
+        formatFixedThreads: result.formatFixedThreads || []
     };
     state = {
         authorOnlyToggle: data.toggledThreads.indexOf(thread) !== -1,
-        fixFormat: data.formatFixedThreads.indexOf(thread) !== -1,
-        fixPhotos: data.fixedPhotosThreads.indexOf(thread) !== -1
+        fixFormat: data.formatFixedThreads.indexOf(thread) !== -1
     };
 
     // Trigger saved actions
@@ -30,9 +27,6 @@ document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads
     }
     if (state.fixFormat) {
         fixFormat(state.fixFormat, thread, true);
-    }
-    if (state.fixPhotos) {
-        fixPhotos(state.fixPhotos, thread, true);
     }
 
 });
@@ -62,15 +56,6 @@ chrome.runtime.onMessage.addListener(
             // Send response to extension with current format fixes toggle state
             sendResponse({status: state.fixFormat});
 
-        } else if (request.action === 'fixPhotos') {
-
-            state.fixPhotos = !state.fixPhotos;
-
-            // Toggle photo fix on current page
-            fixPhotos(state.fixPhotos, request.thread, false);
-
-            // Send response to extension with current photo fix toggle state
-            sendResponse({status: state.fixPhotos});
         }
         // Without this, the listener will stop functioning after the first time sendResponse is called
         return true;
@@ -149,33 +134,8 @@ function fixFormat(status, thread, loadingSaved) {
 
     // If fixFormat is not being called in order to turn fixes ON a revisited thread
     if (!loadingSaved) {
-        // Either save or delete current thread from format fixed threads list, depending on state
+        // Either save or delete current thread from toggled threads list, depending on state
         saveOrDeleteThreadAction(status, thread, 'fixFormat');
-    }
-}
-
-function fixPhotos(status, thread, loadingSaved) {
-
-    var webArchivePrefix = 'https://web.archive.org/web/20141019084541im_';
-    var pbImages = $('li.message .messageInfo .messageContent article .messageText img[data-url*=\'photobucket\']');
-
-    pbImages.each(function(index) {
-
-        var src = $(this).attr('src');
-
-        if (status) {
-            // Add Web Archive prefix to URL
-            $(this).attr('src', webArchivePrefix + src);
-        } else {
-            // Remove Web Archive prefix from URL
-            $(this).attr('src', $(this).attr('src').substring(webArchivePrefix.length));
-        }
-    });
-
-    // If fixPhotos is not being called in order to turn fixes ON a revisited thread
-    if (!loadingSaved) {
-        // Either save or delete current thread from photo fixed threads list, depending on state
-        saveOrDeleteThreadAction(status, thread, 'fixPhotos');
     }
 }
 
@@ -189,14 +149,11 @@ function fixPhotos(status, thread, loadingSaved) {
 function saveOrDeleteThreadAction(status, thread, action) {
 
     var actionsMap = {
-        toggleAuthorOnly: 'toggledThreads',
-        fixFormat: 'formatFixedThreads',
-        fixPhotos: 'fixedPhotosThreads'
+        'toggleAuthorOnly': 'toggledThreads',
+        'fixFormat': 'formatFixedThreads'
     };
 
-    // Get array corresponding to the button the user clicked
     var retrieve = actionsMap[action];
-    console.log(retrieve);
 
     chrome.storage.sync.get(retrieve, function(result) {
         var retrieved = result[retrieve] || [];

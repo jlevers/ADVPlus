@@ -3,6 +3,8 @@ var state = {
     fixFormat: false
 };
 
+console.log("TEST");
+
 // Scrape the name of the current thread (e.g., "the-mobius-trip.344776")
 var threadUrl = $('#pageDescription a:last-of-type').attr('href');
 var thread = threadUrl.substring(threadUrl.indexOf('/') + 1, threadUrl.lastIndexOf('/'));

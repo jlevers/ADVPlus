@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-    var threadRegex = /https?:\/\/advrider\.com\/index\.php\?threads\/.+/i;
+    var threadRegex = /https?:\/\/advrider\.com\/f\/threads\/.+/i;
 
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
 
@@ -70,4 +70,3 @@ $(document).ready(function() {
         status ? $(buttonId).addClass('pure-button-active') : $(buttonId).removeClass('pure-button-active');
     }
 });
-

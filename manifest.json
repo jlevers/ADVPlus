@@ -3,7 +3,7 @@
 
   "name": "ADV+",
   "description": "Provides some useful tools for use with advrider.com.",
-  "version": "1.7",
+  "version": "1.9",
 
   "browser_action": {
     "default_icon": "icon.png",
@@ -11,7 +11,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*advrider.com/*"],
+      "matches": ["*://advrider.com/f/threads/*"],
       "js": ["jquery-3.1.1.min.js", "content.js"]
     }
   ],

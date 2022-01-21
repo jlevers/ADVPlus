@@ -9,7 +9,6 @@ var thread = threadUrl.substring(threadUrl.indexOf('/') + 1, threadUrl.lastIndex
 
 // Toggle ON if thread is in list of toggled threads
 document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'], function(result) {
-
     // Make state variable match saved actions
     var data = {
         toggledThreads: result.toggledThreads || [],
@@ -35,7 +34,6 @@ document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads
 chrome.runtime.onMessage.addListener(
     function(request, sender, sendResponse) {
         if (request.action === 'toggleAuthorOnly') {
-
             // State variable actually gets toggled before the real page does!
             // The order is important, because toggleAuthorOnly() changes the actual toggle state to
             // match the value of state.authorOnlyToggle, not the value of !state.authorOnlyToggle

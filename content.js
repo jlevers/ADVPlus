@@ -8,27 +8,27 @@ var threadUrl = $('#pageDescription a:last-of-type').attr('href');
 var thread = threadUrl.substring(threadUrl.indexOf('/') + 1, threadUrl.lastIndexOf('/'));
 
 // Toggle ON if thread is in list of toggled threads
-document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'], function(result) {
-    // Make state variable match saved actions
-    var data = {
-        toggledThreads: result.toggledThreads || [],
-        formatFixedThreads: result.formatFixedThreads || []
-    };
-    state = {
-        authorOnlyToggle: data.toggledThreads.indexOf(thread) !== -1,
-        fixFormat: data.formatFixedThreads.indexOf(thread) !== -1
-    };
+document.onload = chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'])
+    .then((result) => {
+        // Make state variable match saved actions
+        var data = {
+            toggledThreads: result.toggledThreads || [],
+            formatFixedThreads: result.formatFixedThreads || []
+        };
+        state = {
+            authorOnlyToggle: data.toggledThreads.indexOf(thread) !== -1,
+            fixFormat: data.formatFixedThreads.indexOf(thread) !== -1
+        };
 
-    // Trigger saved actions
+        // Trigger saved actions
 
-    if (state.authorOnlyToggle) {
-        toggleAuthorOnly(state.authorOnlyToggle, thread, true);
-    }
-    if (state.fixFormat) {
-        fixFormat(state.fixFormat, thread, true);
-    }
-
-});
+        if (state.authorOnlyToggle) {
+            toggleAuthorOnly(state.authorOnlyToggle, thread, true);
+        }
+        if (state.fixFormat) {
+            fixFormat(state.fixFormat, thread, true);
+        }
+    });
 
 // Listen for messages from extension
 chrome.runtime.onMessage.addListener(
@@ -153,15 +153,16 @@ function saveOrDeleteThreadAction(status, thread, action) {
 
     var retrieve = actionsMap[action];
 
-    chrome.storage.sync.get(retrieve, function(result) {
-        var retrieved = result[retrieve] || [];
+    chrome.storage.sync.get(retrieve)
+        .then((result) => {
+          var retrieved = result[retrieve] || [];
 
-        if (status) {
-            retrieved.push(thread);
-        } else {
-            retrieved.splice(retrieved.indexOf(thread), 1);
-        }
+            if (status) {
+                retrieved.push(thread);
+            } else {
+                retrieved.splice(retrieved.indexOf(thread), 1);
+            }
 
-        chrome.storage.sync.set({[retrieve]: retrieved});
-    });
+            chrome.storage.sync.set({[retrieve]: retrieved});
+        });
 }

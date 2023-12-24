@@ -10,15 +10,16 @@ $(document).ready(function() {
 
         // Check if the thread being viewed has been saved as toggled, and if so, give the toggle
         // button the active class
-        chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'], function(result) {
-            if (result.toggledThreads?.indexOf(currentThread) !== -1) {
-                toggleButtonState(true, '#toggleAuthorOnly');
-            }
+        chrome.storage.sync.get(['toggledThreads', 'formatFixedThreads'])
+            .then((result) => {
+                if (result.toggledThreads?.indexOf(currentThread) !== -1) {
+                    toggleButtonState(true, '#toggleAuthorOnly');
+                }
 
-            if (result.formatFixedThreads?.indexOf(currentThread) !== -1) {
-                toggleButtonState(true, '#fixFormat');
-            }
-        });
+                if (result.formatFixedThreads?.indexOf(currentThread) !== -1) {
+                    toggleButtonState(true, '#fixFormat');
+                }
+            });
 
         // Disable "Toggle Author Only" button if not currently viewing a url of
         // the structure http(s)://advrider.com/index.php?threads/*

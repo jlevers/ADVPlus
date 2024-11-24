@@ -18,5 +18,14 @@
   "permissions": [
       "activeTab",
       "storage"
-  ]
+  ],
+
+  "browser_specific_settings": {
+    "gecko": {
+        "id": "{b249a4d7-4c43-4da1-b341-a8152fe8fb46}"
+    },
+    "gecko_android": {
+        "id": "{b249a4d7-4c43-4da1-b341-a8152fe8fb46}"
+    }
+  }
 }
